@@ -17,3 +17,17 @@ ipython
 >>> stable_argsort(x)
     tensor([1, 2, 4, 6, 5, 3, 0])
 ```
+
+
+To install, please try:
+```
+ipython 
+>>> import os.path as osp
+>>> from shutil import copytree
+>>> from site import getsitepackages
+>>> install_dir = getsitepackages()[0]
+>>> assert osp.exists("pytorch_stable_sort"), "directory `pytorch_stable_sort` not found, please change directory outside of `pytorch_stable_sort`"
+>>> target_dir = osp.join(install_dir, "torch_stable_sort")
+>>> copytree("pytorch_stable_sort", target_dir)
+>>> print(f"install to {target_dir}")
+```
