@@ -19,7 +19,8 @@ ipython
 ```
 
 
-To install, please try:
+To install, please run: `python setup.py develop`
+Or install by copying files manually:
 ```
 ipython 
 >>> import os.path as osp
