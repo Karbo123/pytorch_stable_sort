@@ -30,7 +30,7 @@ def stable_argsort(value, increasing=True):
                           "We only support float32, float64, int32, and int64."
 
     index_out = torch.arange(len(value), device=value.device)
-    value_clone = value.clone()
+    value_clone = value.clone(memory_format=torch.contiguous_format)
     get_kernel[value.dtype](value_clone, index_out, increasing)
     return index_out
 
@@ -38,7 +38,7 @@ def stable_argsort(value, increasing=True):
 
 if __name__ == "__main__":
     """ to test, please run:
-            CUDA_VISIBLE_DEVICES=0 python pytorch_stable_sort/__init__.py
+            CUDA_VISIBLE_DEVICES=0 python torch_stable_sort/__init__.py
     """
     import numpy as np
     lengths = (100, 1_000, 10_000, 100_000, 1_000_000)
