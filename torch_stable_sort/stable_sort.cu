@@ -1,3 +1,6 @@
+
+#include <ATen/cuda/CUDAContext.h>
+
 #include <torch/extension.h>
 
 #include <thrust/sort.h>
@@ -16,19 +19,19 @@ using i8 = int64_t;
 namespace stable_argsort 
 {
     template <typename ValueType, typename IndexType, typename SizeType>
-    void stableArgsort_kernel(ValueType *value, IndexType *index_out, SizeType length, bool increasing, bool is_cuda)
+    void stableArgsort_cuda_kernel(ValueType *value, IndexType *index_out, SizeType length, bool increasing, cudaStream_t stream)
     {
-        if (is_cuda)
-        {
-            auto policy = thrust::device;
-            if (increasing) thrust::stable_sort_by_key(policy, value, value + length, index_out, thrust::less<ValueType>());
-            else thrust::stable_sort_by_key(policy, value, value + length, index_out, thrust::greater<ValueType>());
-        } else
-        {
-            auto policy = thrust::host;
-            if (increasing) thrust::stable_sort_by_key(policy, value, value + length, index_out, thrust::less<ValueType>());
-            else thrust::stable_sort_by_key(policy, value, value + length, index_out, thrust::greater<ValueType>());
-        }
+        auto policy = thrust::cuda::par.on(stream);
+        if (increasing) thrust::stable_sort_by_key(policy, value, value + length, index_out, thrust::less<ValueType>());
+        else thrust::stable_sort_by_key(policy, value, value + length, index_out, thrust::greater<ValueType>());   
+    }
+
+    template <typename ValueType, typename IndexType, typename SizeType>
+    void stableArgsort_cpu_kernel(ValueType *value, IndexType *index_out, SizeType length, bool increasing)
+    {
+        auto policy = thrust::host;
+        if (increasing) thrust::stable_sort_by_key(policy, value, value + length, index_out, thrust::less<ValueType>());
+        else thrust::stable_sort_by_key(policy, value, value + length, index_out, thrust::greater<ValueType>());
     }
 
     template <typename ValueType, typename IndexType, typename SizeType>
@@ -37,9 +40,18 @@ namespace stable_argsort
         ValueType* value_ptr     = value.data_ptr<ValueType>();
         IndexType* index_out_ptr = index_out.data_ptr<IndexType>();
         SizeType   length        = value.size(0);
-
+        
         bool is_cuda = value.is_cuda();
-        stableArgsort_kernel<ValueType, IndexType, SizeType>(value_ptr, index_out_ptr, length, increasing, is_cuda);
+        if (is_cuda)
+        {
+            auto device = value.get_device();
+            auto stream = at::cuda::getCurrentCUDAStream();
+            cudaSetDevice(device);
+            stableArgsort_cuda_kernel<ValueType, IndexType, SizeType>(value_ptr, index_out_ptr, length, increasing, stream);
+        } else
+        {
+            stableArgsort_cpu_kernel<ValueType, IndexType, SizeType>(value_ptr, index_out_ptr, length, increasing);
+        }
     }
 }
 

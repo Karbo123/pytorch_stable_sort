@@ -25,6 +25,7 @@ def stable_argsort(value, increasing=True):
     Returns:
         index (torch.Tensor): the index to sort (int64)
     """
+    assert value.ndim == 1, "Only support one-dimensional tensor"
     assert value.dtype in (torch.float32, torch.float64, torch.int32, torch.int64), \
                           "Unsupported data type to sort. " \
                           "We only support float32, float64, int32, and int64."
