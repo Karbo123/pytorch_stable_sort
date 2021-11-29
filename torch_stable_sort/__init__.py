@@ -39,8 +39,9 @@ def stable_argsort(value, increasing=True):
 
 if __name__ == "__main__":
     """ to test, please run:
-            CUDA_VISIBLE_DEVICES=0 python torch_stable_sort/__init__.py
+            CUDA_VISIBLE_DEVICES=6,7 python torch_stable_sort/__init__.py
     """
+    # test exactness
     import numpy as np
     lengths = (100, 1_000, 10_000, 100_000, 1_000_000)
     for length in lengths:
@@ -62,4 +63,20 @@ if __name__ == "__main__":
                     
                     assert (index_pred == index_gt).all(), "result mismatch"
                     print("\tpass")
+
+    # test whether support multi-gpus
+    print("testing multi-gpus...", end="")
+    class Model(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+        def forward(self, x):
+            return stable_argsort(x.squeeze(0)).unsqueeze(0)
+    model = Model().cuda()
+    from torch.nn import DataParallel
+    model = DataParallel(model)
+    x = torch.randint(100, size=(2, 10000), device="cuda")
+    y = model(x).cpu().numpy()
+    y_gt = np.argsort(x.cpu().numpy(), axis=1, kind="stable")
+    assert np.all(y_gt == y), "result mismatch"
+    print("\tpass")
 
